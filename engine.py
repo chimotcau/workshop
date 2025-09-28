@@ -34,6 +34,13 @@ class Board:
                     self.grid[i][j]=Piece(WHITE)
     
    
+
+    def print_board(self):
+        for row in self.grid:
+            print(" ".join(str(cell) if cell else "." for cell in row))
+if __name__ == "__main__":
+    board = Board(8)  
+    board.print_board()
     
     
     
