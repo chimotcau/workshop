@@ -19,11 +19,11 @@ class Board:
     def __init__(self,size):
         size=8
         self.size=size
-        self.grid=[[EMPTY]*size for _ in range(size)]
+        self.grid=[[EMPTY]*size for i in range(size)]
         self.reset()    
     def reset(self):
         s=self.size
-        self.grid=[[EMPTY]*s for _ in range(s)]
+        self.grid=[[EMPTY]*s for i in range(s)]
         for i in range(3):
             for j in range(s):
                 if((i+j)%2==1):
