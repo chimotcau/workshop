@@ -5,4 +5,4 @@ This is a simple two-player checkers game called "draughts" implemented in Pytho
 - Mandatory capture rule: if a capture is possible, it must be made.
 - Multi-jump capture sequences are supported.
 - Two game modes: PvP and PvB .
-
+- More about the rules: https://en.wikipedia.org/wiki/English_draughts#Starting_position
