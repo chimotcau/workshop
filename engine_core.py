@@ -30,7 +30,6 @@ class Board:
         self.grid = [[EMPTY] * size for _ in range(size)]
         self.reset()
 
-    # --- Setup ---
     def reset(self):
         s = self.size
         self.grid = [[EMPTY] * s for _ in range(s)]
@@ -42,8 +41,7 @@ class Board:
             for c in range(s):
                 if (r + c) % 2 == 1:
                     self.grid[r][c] = Piece(WHITE)
-
-    # --- Helpers ---
+                    
     def in_bounds(self, r, c):
         return 0 <= r < self.size and 0 <= c < self.size
 
@@ -53,7 +51,6 @@ class Board:
     def clone(self):
         return deepcopy(self)
 
-    # --- Move / promotion ---
     def move_piece(self, move: Move):
         fr = move.fr
         to = move.to
@@ -64,14 +61,12 @@ class Board:
         for cap in move.captures:
             self.grid[cap[0]][cap[1]] = EMPTY
 
-        # Promotion to king
         if p and not p.king:
             if p.color == WHITE and to[0] == 0:
                 p.king = True
             elif p.color == BLACK and to[0] == self.size - 1:
                 p.king = True
 
-    # --- Pieces listing ---
     def players_pieces(self, color):
         return [
             (r, c)
@@ -80,7 +75,6 @@ class Board:
             if self.grid[r][c] and self.grid[r][c].color == color
         ]
 
-    # --- Legal moves for a color (capture priority) ---
     def get_all_legal_moves(self, color):
         normal_moves = []
         capture_moves = []
@@ -99,30 +93,26 @@ class Board:
             return [m for m in capture_moves if len(m.captures) == maxlen]
         return normal_moves
 
-    # --- Moves for a single piece ---
     def _piece_moves(self, r, c, piece):
         moves = []
 
-        # directions for simple moves (and for allowed jump directions for non-kings)
         if piece.king:
             simple_dirs = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
         elif piece.color == WHITE:
-            simple_dirs = [(-1, -1), (-1, 1)]  # white moves upward (decreasing row)
-        else:  # BLACK
-            simple_dirs = [(1, -1), (1, 1)]   # black moves downward (increasing row)
+            simple_dirs = [(-1, -1), (-1, 1)]  
+        else:  
+            simple_dirs = [(1, -1), (1, 1)]   
 
-        # Simple (non-capture) moves
         for dr, dc in simple_dirs:
             nr, nc = r + dr, c + dc
             if self.in_bounds(nr, nc) and self.grid[nr][nc] is EMPTY:
                 moves.append(Move((r, c), (nr, nc), []))
 
-        # Capture chains (recursive). Use jump_dirs consistent with piece type
         capture_chains = []
 
         def dfs(cr, cc, grid_snapshot, captured):
             found = False
-            # restrict jump directions for non-kings to forward-only
+            
             if piece.king:
                 jump_dirs = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
             elif piece.color == WHITE:
@@ -131,8 +121,8 @@ class Board:
                 jump_dirs = [(1, -1), (1, 1)]
 
             for dr, dc in jump_dirs:
-                mr, mc = cr + dr, cc + dc        # middle square (opponent piece)
-                lr, lc = cr + 2 * dr, cc + 2 * dc  # landing square
+                mr, mc = cr + dr, cc + dc       
+                lr, lc = cr + 2 * dr, cc + 2 * dc  
                 if not (self.in_bounds(mr, mc) and self.in_bounds(lr, lc)):
                     continue
                 mid_piece = grid_snapshot[mr][mc]
@@ -149,26 +139,22 @@ class Board:
                     new_grid[mr][mc] = EMPTY
                     dfs(lr, lc, new_grid, captured + [(mr, mc)])
             if not found and captured:
-                # finished a capture chain
                 capture_chains.append(Move((r, c), (cr, cc), captured.copy()))
 
         dfs(r, c, self.grid, [])
         moves.extend(capture_chains)
         return moves
 
-    # --- Terminal & winner detection ---
     def is_terminal(self):
         white_pieces = self.players_pieces(WHITE)
         black_pieces = self.players_pieces(BLACK)
 
-        # If either side has no pieces -> terminal
         if not white_pieces or not black_pieces:
             return True
 
         white_moves = self.get_all_legal_moves(WHITE)
         black_moves = self.get_all_legal_moves(BLACK)
 
-        # If either side has no legal moves -> terminal
         if not white_moves or not black_moves:
             return True
 
@@ -183,7 +169,6 @@ class Board:
         white_moves = self.get_all_legal_moves(WHITE)
         black_moves = self.get_all_legal_moves(BLACK)
 
-        # no pieces
         if not white_pieces and not black_pieces:
             return 'draw'
         if not white_pieces:
@@ -191,7 +176,6 @@ class Board:
         if not black_pieces:
             return WHITE
 
-        # blocked cases
         if not white_moves and not black_moves:
             return 'draw'
         if not white_moves:
