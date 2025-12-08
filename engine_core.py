@@ -114,7 +114,7 @@ class Board:
             found = False
             
             if piece.king:
-                jump_dirs = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+                jump_dirs = [(-1, -1), (-1, 1), (1, -1), (1, 1), (-1,0), (1,0), (0,1), (0,-1)]
             elif piece.color == WHITE:
                 jump_dirs = [(-1, -1), (-1, 1)]
             else:
