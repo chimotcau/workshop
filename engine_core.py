@@ -4,7 +4,6 @@ WHITE = 'white'
 BLACK = 'black'
 EMPTY = None
 
-
 class Piece:
     def __init__(self, color, king=False):
         self.color = color
@@ -12,7 +11,6 @@ class Piece:
 
     def __repr__(self):
         return f"{'W' if self.color == WHITE else 'B'}{'K' if self.king else ''}"
-
 
 class Move:
     def __init__(self, fr, to, captures=None):
@@ -23,7 +21,6 @@ class Move:
     def __repr__(self):
         return f"Move({self.fr}->{self.to}, caps={self.captures})"
 
-
 class Board:
     def __init__(self, size=8):
         self.size = size
@@ -31,156 +28,168 @@ class Board:
         self.reset()
 
     def reset(self):
-        s = self.size
-        self.grid = [[EMPTY] * s for _ in range(s)]
-        for r in range(3):
-            for c in range(s):
-                if (r + c) % 2 == 1:
-                    self.grid[r][c] = Piece(BLACK)
-        for r in range(s - 3, s):
-            for c in range(s):
-                if (r + c) % 2 == 1:
-                    self.grid[r][c] = Piece(WHITE)
+        board_size = self.size
+        self.grid = [[EMPTY] * board_size for _ in range(board_size)]
+        
+        for row in range(3):
+            for col in range(board_size):
+                if (row + col) % 2 == 1:
+                    self.grid[row][col] = Piece(BLACK)
+        
+        for row in range(board_size - 3, board_size):
+            for col in range(board_size):
+                if (row + col) % 2 == 1:
+                    self.grid[row][col] = Piece(WHITE)
                     
-    def in_bounds(self, r, c):
-        return 0 <= r < self.size and 0 <= c < self.size
+    def in_bounds(self, row, col):
+        return 0 <= row < self.size and 0 <= col < self.size
 
-    def piece_at(self, r, c):
-        return self.grid[r][c]
+    def piece_at(self, row, col):
+        return self.grid[row][col]
 
-    def clone(self):
-        return deepcopy(self)
+    def move_piece(self, move):
+        from_row, from_col = move.fr
+        to_row, to_col = move.to
+        piece = self.grid[from_row][from_col]
+        
+        if not piece:
+            return False
+            
+        self.grid[from_row][from_col] = EMPTY
+        self.grid[to_row][to_col] = piece
 
-    def move_piece(self, move: Move):
-        fr = move.fr
-        to = move.to
-        p = self.grid[fr[0]][fr[1]]
-        self.grid[fr[0]][fr[1]] = EMPTY
-        self.grid[to[0]][to[1]] = p
+        for cap_row, cap_col in move.captures:
+            self.grid[cap_row][cap_col] = EMPTY
 
-        for cap in move.captures:
-            self.grid[cap[0]][cap[1]] = EMPTY
-
-        if p and not p.king:
-            if p.color == WHITE and to[0] == 0:
-                p.king = True
-            elif p.color == BLACK and to[0] == self.size - 1:
-                p.king = True
+        if not piece.king:
+            if piece.color == WHITE and to_row == 0:
+                piece.king = True
+            elif piece.color == BLACK and to_row == self.size - 1:
+                piece.king = True
+                
+        return True
 
     def players_pieces(self, color):
-        return [
-            (r, c)
-            for r in range(self.size)
-            for c in range(self.size)
-            if self.grid[r][c] and self.grid[r][c].color == color
-        ]
+        positions = []
+        for row in range(self.size):
+            for col in range(self.size):
+                piece = self.grid[row][col]
+                if piece and piece.color == color:
+                    positions.append((row, col))
+        return positions
 
     def get_all_legal_moves(self, color):
-        normal_moves = []
-        capture_moves = []
-        for r in range(self.size):
-            for c in range(self.size):
-                p = self.grid[r][c]
-                if not p or p.color != color:
+        all_moves = []
+        has_captures = False
+        
+        for row in range(self.size):
+            for col in range(self.size):
+                piece = self.grid[row][col]
+                if not piece or piece.color != color:
                     continue
-                for m in self._piece_moves(r, c, p):
-                    if m.captures:
-                        capture_moves.append(m)
-                    else:
-                        normal_moves.append(m)
-        if capture_moves:
-            maxlen = max(len(m.captures) for m in capture_moves)
-            return [m for m in capture_moves if len(m.captures) == maxlen]
-        return normal_moves
+                    
+                moves = self.get_piece_moves(row, col)
+                for move in moves:
+                    if move.captures:
+                        has_captures = True
+                        all_moves.append(move)
+                    elif not has_captures:
+                        all_moves.append(move)
+        
+        if has_captures:
+            return [move for move in all_moves if move.captures]
+        
+        return all_moves
 
-    def _piece_moves(self, r, c, piece):
+    def get_piece_moves(self, row, col):
+        piece = self.grid[row][col]
+        if not piece:
+            return []
+
         moves = []
 
         if piece.king:
-            simple_dirs = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+            directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
         elif piece.color == WHITE:
-            simple_dirs = [(-1, -1), (-1, 1)]  
-        else:  
-            simple_dirs = [(1, -1), (1, 1)]   
+            directions = [(-1, -1), (-1, 1)]
+        else:
+            directions = [(1, -1), (1, 1)]
 
-        for dr, dc in simple_dirs:
-            nr, nc = r + dr, c + dc
-            if self.in_bounds(nr, nc) and self.grid[nr][nc] is EMPTY:
-                moves.append(Move((r, c), (nr, nc), []))
+        for delta_row, delta_col in directions:
+            new_row = row + delta_row
+            new_col = col + delta_col
+            if (self.in_bounds(new_row, new_col) and 
+                self.grid[new_row][new_col] is EMPTY):
+                moves.append(Move((row, col), (new_row, new_col), []))
 
         capture_chains = []
 
-        def dfs(cr, cc, grid_snapshot, captured):
+        def dfs(current_row, current_col, grid, captured, current_piece):
             found = False
             
-            if piece.king:
-                jump_dirs = [(-1, -1), (-1, 1), (1, -1), (1, 1), (-1,0), (1,0), (0,1), (0,-1)]
-            elif piece.color == WHITE:
+            if current_piece.king:
+                jump_dirs = [(-1, -1), (-1, 1), (1, -1), (1, 1)]
+            elif current_piece.color == WHITE:
                 jump_dirs = [(-1, -1), (-1, 1)]
             else:
                 jump_dirs = [(1, -1), (1, 1)]
 
-            for dr, dc in jump_dirs:
-                mr, mc = cr + dr, cc + dc       
-                lr, lc = cr + 2 * dr, cc + 2 * dc  
-                if not (self.in_bounds(mr, mc) and self.in_bounds(lr, lc)):
+            for delta_row, delta_col in jump_dirs:
+                middle_row = current_row + delta_row
+                middle_col = current_col + delta_col
+                land_row = current_row + 2 * delta_row
+                land_col = current_col + 2 * delta_col
+                
+                if not (self.in_bounds(middle_row, middle_col) and 
+                        self.in_bounds(land_row, land_col)):
                     continue
-                mid_piece = grid_snapshot[mr][mc]
-                if (
-                    mid_piece
-                    and mid_piece.color != piece.color
-                    and grid_snapshot[lr][lc] is EMPTY
-                    and (mr, mc) not in captured
-                ):
+                    
+                middle_piece = grid[middle_row][middle_col]
+                if (middle_piece and middle_piece.color != current_piece.color and 
+                    grid[land_row][land_col] is EMPTY and
+                    (middle_row, middle_col) not in captured):
+                    
                     found = True
-                    new_grid = deepcopy(grid_snapshot)
-                    new_grid[cr][cc] = EMPTY
-                    new_grid[lr][lc] = piece
-                    new_grid[mr][mc] = EMPTY
-                    dfs(lr, lc, new_grid, captured + [(mr, mc)])
+                    new_grid = deepcopy(grid)
+                    new_grid[current_row][current_col] = EMPTY
+                    
+                    new_piece = Piece(current_piece.color, current_piece.king)
+                    if not new_piece.king:
+                        if new_piece.color == WHITE and land_row == 0:
+                            new_piece.king = True
+                        elif new_piece.color == BLACK and land_row == self.size - 1:
+                            new_piece.king = True
+                    
+                    new_grid[land_row][land_col] = new_piece
+                    new_grid[middle_row][middle_col] = EMPTY
+                    
+                    dfs(land_row, land_col, new_grid, 
+                        captured + [(middle_row, middle_col)], new_piece)
+            
             if not found and captured:
-                capture_chains.append(Move((r, c), (cr, cc), captured.copy()))
+                capture_chains.append(
+                    Move((row, col), (current_row, current_col), captured.copy())
+                )
 
-        dfs(r, c, self.grid, [])
+        dfs(row, col, self.grid, [], piece)
         moves.extend(capture_chains)
+        
         return moves
 
     def is_terminal(self):
-        white_pieces = self.players_pieces(WHITE)
-        black_pieces = self.players_pieces(BLACK)
-
-        if not white_pieces or not black_pieces:
-            return True
-
         white_moves = self.get_all_legal_moves(WHITE)
         black_moves = self.get_all_legal_moves(BLACK)
-
-        if not white_moves or not black_moves:
-            return True
-
-        return False
+        return not white_moves or not black_moves
 
     def winner(self):
-        if not self.is_terminal():
-            return None
-
-        white_pieces = self.players_pieces(WHITE)
-        black_pieces = self.players_pieces(BLACK)
         white_moves = self.get_all_legal_moves(WHITE)
         black_moves = self.get_all_legal_moves(BLACK)
-
-        if not white_pieces and not black_pieces:
-            return 'draw'
-        if not white_pieces:
-            return BLACK
-        if not black_pieces:
-            return WHITE
-
+        
         if not white_moves and not black_moves:
             return 'draw'
         if not white_moves:
-            return BLACK
-        if not black_moves:
             return WHITE
-
-        return 'draw'
+        if not black_moves:
+            return BLACK
+        
+        return None
